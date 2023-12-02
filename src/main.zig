@@ -12,18 +12,17 @@ pub fn main() !void {
 
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
-    var out: [16]u8 = undefined;
-    try stdout_file.print("{d}", .{base64.encode("isaiah", out[0..])});
-
     const std_in = std.io.getStdIn().reader();
     const stderr = std.io.getStdErr().writer();
     var buffer: [4096]u8 = undefined;
+    var out_buf: [4096]u8 = undefined;
     while (true) {
         var read = try std_in.read(&buffer);
         if (read < 1) {
             break;
         }
-        if (stdout.write(buffer[0..read])) |_| {} else |err| {
+        const size = base64.encode_no_pad(buffer[0..read], out_buf[0..]);
+        if (stdout.write(out_buf[0..size])) |_| {} else |err| {
             try stderr.print("err {}", .{err});
         }
     }
@@ -33,7 +32,5 @@ pub fn main() !void {
 }
 
 test {
- @import("std").testing.refAllDecls(@This());
+    @import("std").testing.refAllDecls(@This());
 }
-
-
