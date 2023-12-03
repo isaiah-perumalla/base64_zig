@@ -2,11 +2,16 @@ const std = @import("std");
 pub const standard_alphabet_chars: *const [64:0]u8 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 pub const chars = standard_alphabet_chars;
 
-pub fn encode_no_pad(in: []const u8, out: []u8) usize {
+const Result = struct { encoded_size: usize, rem_size: u8, rem: [2]u8 };
+
+pub fn encode_no_pad(in: []const u8, out: []u8) Result {
     const mask = 0x3F; // mask 2^6 -1, extract lower 6 bits
+    const rem_size: usize = @mod(in.len, 3);
+    const in_size: usize = in.len - rem_size;
+
     var i: usize = 0;
     var out_idx: usize = 0;
-    while (i + 2 < in.len) : (i += 3) {
+    while (i + 2 < in_size) : (i += 3) {
         const b0 = in[i];
         const b1 = in[i + 1];
         const b2 = in[i + 2];
@@ -21,10 +26,17 @@ pub fn encode_no_pad(in: []const u8, out: []u8) usize {
         out[out_idx + 3] = chars[c3];
         out_idx += 4;
     }
-    return out_idx;
+    var rem: [2]u8 = undefined;
+
+    var j: usize = 0;
+    while (j < rem_size) : (j += 1) {
+        rem[j] = in[in.len + j - rem_size];
+    }
+
+    return Result{ .encoded_size = out_idx, .rem_size = @truncate(rem_size), .rem = rem };
 }
 
-inline fn encode_pad(a: u8, b: ?u8, dest: []u8) void {
+pub inline fn encode_pad(a: u8, b: ?u8, dest: []u8) void {
     const c0 = a >> 2;
     dest[0] = chars[c0];
     if (b == null) {
